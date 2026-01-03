@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Game Tournament</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; margin: 0; }
+      .page-break { page-break-after: always; }
+      .match-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 8px 0;
+        padding: 6px 5px;
+        border: 1px solid #333;
+        min-height: 30px;
+      }
+      .score-box {
+        width: 35px;
+        height: 30px;
+        border: 2px solid #000;
+        display: inline-block;
+        margin: 0 5px;
+        text-align: center;
+        line-height: 30px;
+        font-weight: bold;
+        font-size: 14px;
+      }
+      .player-name {
+        font-size: 11px;
+        font-weight: bold;
+        width: 120px;
+      }
+      h1 { font-size: 20px; margin-bottom: 8px; text-align: center; }
+      h2 { font-size: 18px; margin-top: 10px; margin-bottom: 8px; }
+      h3 { font-size: 14px; margin-top: 8px; margin-bottom: 5px; font-weight: bold; }
+      h4 { font-size: 12px; margin-bottom: 5px; font-weight: bold; }
+      .group-container { display: flex; gap: 15px; margin-bottom: 10px; }
+      .group-column { flex: 1; }
+      .knockout-section { margin-top: 10px; padding: 8px; background: #f0f0f0; }
+      .knockout-match { margin-bottom: 8px; }
+    }
+    @media screen {
+      .page-break {
+        border-top: 2px dashed #ccc;
+        margin: 40px 0;
+        padding-top: 40px;
+      }
+      .group-container { display: flex; gap: 15px; margin-bottom: 20px; }
+      .group-column { flex: 1; }
+    }
+    .print-view {
+      background: white;
+      padding: 20px;
+      max-width: 100%;
+    }
+    .match-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      padding: 6px 5px;
+      border: 1px solid #333;
+      min-height: 30px;
+    }
+    .score-box {
+      width: 35px;
+      height: 30px;
+      border: 2px solid #000;
+      display: inline-block;
+      margin: 0 5px;
+      background: white;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .player-name {
+      font-size: 11px;
+      font-weight: bold;
+      width: 120px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen"></div>
+  <script src="main.js"></script>
+</body>
+</html>
