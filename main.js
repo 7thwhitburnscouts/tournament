@@ -668,6 +668,12 @@ function renderMainView() {
   // Knockout stage
   const autoKO = getAutoFilledKnockouts(currentGame);
   const ko = games[currentGame].knockouts;
+  const groupAComplete = isGroupComplete(currentGame, 'A');
+  const groupBComplete = isGroupComplete(currentGame, 'B');
+  const groupCComplete = isGroupComplete(currentGame, 'C');
+  const groupDComplete = isGroupComplete(currentGame, 'D');
+  const semi1HasScore = ko.semi1.score1 !== '' && ko.semi1.score2 !== '';
+  const semi2HasScore = ko.semi2.score1 !== '' && ko.semi2.score2 !== '';
 
   html += `
     <div class="p-4 bg-white rounded-lg shadow">
@@ -678,14 +684,14 @@ function renderMainView() {
         <div>
           <h3 class="font-semibold mb-3">Semi-Final 1: (Group A Winner vs Group B Winner)</h3>
           <div class="flex items-center gap-2 mb-2">
-            <input type="text" value="${escapeHtml(autoKO.semi1.player1)}" readonly
+            <input type="text" value="${groupAComplete ? escapeHtml(autoKO.semi1.player1) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Group A Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.semi1.score1)}"
               onchange="updateKnockout(${currentGame}, 'semi1', 'score1', this.value)"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
           <div class="flex items-center gap-2">
-            <input type="text" value="${escapeHtml(autoKO.semi1.player2)}" readonly
+            <input type="text" value="${groupBComplete ? escapeHtml(autoKO.semi1.player2) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Group B Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.semi1.score2)}"
               onchange="updateKnockout(${currentGame}, 'semi1', 'score2', this.value)"
@@ -696,14 +702,14 @@ function renderMainView() {
         <div>
           <h3 class="font-semibold mb-3">Semi-Final 2: (Group C Winner vs Group D Winner)</h3>
           <div class="flex items-center gap-2 mb-2">
-            <input type="text" value="${escapeHtml(autoKO.semi2.player1)}" readonly
+            <input type="text" value="${groupCComplete ? escapeHtml(autoKO.semi2.player1) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Group C Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.semi2.score1)}"
               onchange="updateKnockout(${currentGame}, 'semi2', 'score1', this.value)"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
           <div class="flex items-center gap-2">
-            <input type="text" value="${escapeHtml(autoKO.semi2.player2)}" readonly
+            <input type="text" value="${groupDComplete ? escapeHtml(autoKO.semi2.player2) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Group D Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.semi2.score2)}"
               onchange="updateKnockout(${currentGame}, 'semi2', 'score2', this.value)"
@@ -714,14 +720,14 @@ function renderMainView() {
         <div class="pt-4 border-t-2 border-yellow-400">
           <h3 class="font-semibold mb-3 text-lg">Final:</h3>
           <div class="flex items-center gap-2 mb-2">
-            <input type="text" value="${escapeHtml(autoKO.final.player1)}" readonly
+            <input type="text" value="${semi1HasScore ? escapeHtml(autoKO.final.player1) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Semi-Final 1 Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.final.score1)}"
               onchange="updateKnockout(${currentGame}, 'final', 'score1', this.value)"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
           <div class="flex items-center gap-2">
-            <input type="text" value="${escapeHtml(autoKO.final.player2)}" readonly
+            <input type="text" value="${semi2HasScore ? escapeHtml(autoKO.final.player2) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Semi-Final 2 Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.final.score2)}"
               onchange="updateKnockout(${currentGame}, 'final', 'score2', this.value)"
