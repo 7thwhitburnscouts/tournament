@@ -1,6 +1,7 @@
 // State
 let players = [];
 let games = [];
+let unavailablePlayers = [];
 let currentGame = 0;
 let showNameMenu = false;
 let showPlayerMenu = false;
@@ -14,7 +15,13 @@ const GROUPS = ['A', 'B', 'C', 'D'];
 function init() {
   players = getInitialPlayers();
   games = getInitialGames();
+  unavailablePlayers = getInitialUnavailable();
   render();
+}
+
+function getInitialUnavailable() {
+  const saved = localStorage.getItem('tournamentUnavailable');
+  return saved ? JSON.parse(saved) : [];
 }
 
 function getInitialPlayers() {
@@ -61,6 +68,7 @@ function createEmptyGame(num) {
 function saveToStorage() {
   localStorage.setItem('tournamentPlayers', JSON.stringify(players));
   localStorage.setItem('tournamentGames', JSON.stringify(games));
+  localStorage.setItem('tournamentUnavailable', JSON.stringify(unavailablePlayers));
 }
 
 // Actions
@@ -83,6 +91,21 @@ function updateGameName(index, value) {
   games[index].name = value;
   saveToStorage();
   render();
+}
+
+function togglePlayerAvailability(playerName) {
+  const idx = unavailablePlayers.indexOf(playerName);
+  if (idx === -1) {
+    unavailablePlayers.push(playerName);
+  } else {
+    unavailablePlayers.splice(idx, 1);
+  }
+  saveToStorage();
+  render();
+}
+
+function isPlayerUnavailable(playerName) {
+  return unavailablePlayers.includes(playerName);
 }
 
 function shuffleArray(array) {
@@ -139,6 +162,7 @@ function clearAllData() {
   if (window.confirm('Are you sure you want to clear ALL tournament data? This cannot be undone!')) {
     localStorage.removeItem('tournamentPlayers');
     localStorage.removeItem('tournamentGames');
+    localStorage.removeItem('tournamentUnavailable');
     window.location.reload();
   }
 }
@@ -148,7 +172,8 @@ function exportData() {
     version: 1,
     exportedAt: new Date().toISOString(),
     players: players,
-    games: games
+    games: games,
+    unavailablePlayers: unavailablePlayers
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -176,6 +201,7 @@ function importData() {
         if (confirm('This will replace all current data. Continue?')) {
           players = data.players;
           games = data.games;
+          unavailablePlayers = data.unavailablePlayers || [];
           saveToStorage();
           render();
         }
@@ -232,13 +258,33 @@ function calculateStandings(gameIndex, group) {
     points: 0
   }));
 
+  const groupPlayers = groupData.groups[group];
+
   groupData.matches[group].forEach((match, idx) => {
-    const homeScore = parseInt(match.home) || 0;
-    const awayScore = parseInt(match.away) || 0;
-
-    if (match.home === '' && match.away === '') return;
-
     const [homeIdx, awayIdx] = MATCHUPS[idx];
+    const homePlayer = groupPlayers[homeIdx];
+    const awayPlayer = groupPlayers[awayIdx];
+    const homeUnavail = isPlayerUnavailable(homePlayer);
+    const awayUnavail = isPlayerUnavailable(awayPlayer);
+
+    let homeScore, awayScore;
+
+    // Handle forfeits
+    if (homeUnavail && awayUnavail) {
+      // Both unavailable - no match played
+      return;
+    } else if (homeUnavail) {
+      homeScore = 0;
+      awayScore = 3;
+    } else if (awayUnavail) {
+      homeScore = 3;
+      awayScore = 0;
+    } else {
+      // Normal match - use entered scores
+      if (match.home === '' && match.away === '') return;
+      homeScore = parseInt(match.home) || 0;
+      awayScore = parseInt(match.away) || 0;
+    }
 
     standings[homeIdx].played++;
     standings[awayIdx].played++;
@@ -377,17 +423,43 @@ function renderGroupMatches(gameIndex, groupName) {
 
   MATCHUPS.forEach((matchup, idx) => {
     const match = groupData.matches[groupName][idx];
+    const homePlayer = groupPlayers[matchup[0]];
+    const awayPlayer = groupPlayers[matchup[1]];
+    const homeUnavail = isPlayerUnavailable(homePlayer);
+    const awayUnavail = isPlayerUnavailable(awayPlayer);
+    const isForfeit = homeUnavail || awayUnavail;
+
+    let homeValue = match.home;
+    let awayValue = match.away;
+
+    // Show forfeit scores
+    if (homeUnavail && !awayUnavail) {
+      homeValue = '0';
+      awayValue = '3';
+    } else if (awayUnavail && !homeUnavail) {
+      homeValue = '3';
+      awayValue = '0';
+    } else if (homeUnavail && awayUnavail) {
+      homeValue = '-';
+      awayValue = '-';
+    }
+
+    const homeClass = homeUnavail ? 'line-through text-gray-400' : '';
+    const awayClass = awayUnavail ? 'line-through text-gray-400' : '';
+    const inputClass = isForfeit ? 'bg-gray-200 text-gray-500' : '';
+
     html += `
       <div class="flex items-center gap-2">
-        <span class="w-28 text-right truncate">${escapeHtml(groupPlayers[matchup[0]])}</span>
-        <input type="number" min="0" value="${escapeHtml(match.home)}"
+        <span class="w-28 text-right truncate ${homeClass}">${escapeHtml(homePlayer)}</span>
+        <input type="number" min="0" value="${escapeHtml(homeValue)}"
           onchange="updateMatchScore(${gameIndex}, '${groupName}', ${idx}, 'home', this.value)"
-          class="w-14 border rounded px-2 py-1 text-center" />
+          class="w-14 border rounded px-2 py-1 text-center ${inputClass}" ${isForfeit ? 'disabled' : ''} />
         <span>-</span>
-        <input type="number" min="0" value="${escapeHtml(match.away)}"
+        <input type="number" min="0" value="${escapeHtml(awayValue)}"
           onchange="updateMatchScore(${gameIndex}, '${groupName}', ${idx}, 'away', this.value)"
-          class="w-14 border rounded px-2 py-1 text-center" />
-        <span class="w-28 truncate">${escapeHtml(groupPlayers[matchup[1]])}</span>
+          class="w-14 border rounded px-2 py-1 text-center ${inputClass}" ${isForfeit ? 'disabled' : ''} />
+        <span class="w-28 truncate ${awayClass}">${escapeHtml(awayPlayer)}</span>
+        ${isForfeit ? '<span class="text-xs text-red-500 ml-1">Forfeit</span>' : ''}
       </div>
     `;
   });
@@ -417,10 +489,12 @@ function renderGroupMatches(gameIndex, groupName) {
   `;
 
   standings.forEach((standing, idx) => {
+    const isUnavail = isPlayerUnavailable(standing.player);
     const rowClass = idx === 0 ? 'bg-green-50 font-semibold' : '';
+    const nameClass = isUnavail ? 'line-through text-gray-400' : '';
     html += `
       <tr class="${rowClass}">
-        <td class="px-1 py-1 truncate max-w-[100px]">${escapeHtml(standing.player)}</td>
+        <td class="px-1 py-1 truncate max-w-[100px] ${nameClass}">${escapeHtml(standing.player)}</td>
         <td class="text-center px-1 py-1">${standing.played}</td>
         <td class="text-center px-1 py-1">${standing.won}</td>
         <td class="text-center px-1 py-1">${standing.drawn}</td>
@@ -607,10 +681,18 @@ function renderMainView() {
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
     `;
     players.forEach((player, idx) => {
+      const isUnavail = isPlayerUnavailable(player);
       html += `
-        <input type="text" value="${escapeHtml(player)}"
-          onchange="updatePlayerName(${idx}, this.value)"
-          class="border rounded px-2 py-1" />
+        <div class="flex items-center gap-2">
+          <input type="text" value="${escapeHtml(player)}"
+            onchange="updatePlayerName(${idx}, this.value)"
+            class="border rounded px-2 py-1 flex-1 ${isUnavail ? 'line-through text-gray-400' : ''}" />
+          <label class="flex items-center gap-1 text-xs whitespace-nowrap">
+            <input type="checkbox" ${isUnavail ? 'checked' : ''}
+              onchange="togglePlayerAvailability('${escapeHtml(player)}')" />
+            N/A
+          </label>
+        </div>
       `;
     });
     html += `
