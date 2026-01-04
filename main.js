@@ -571,7 +571,7 @@ function renderPrintView() {
 
 function renderMainView() {
   let html = `
-    <h1 class="text-3xl font-bold mb-6 text-center">Multi-Game Tournament</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center">7th Whitburn Scouts Tournament Jan 2026</h1>
 
     <div class="mb-6 p-4 bg-white rounded-lg shadow">
       <h2 class="text-xl font-bold mb-4">Player List</h2>
