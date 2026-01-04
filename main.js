@@ -3,6 +3,7 @@ let players = [];
 let games = [];
 let currentGame = 0;
 let showNameMenu = false;
+let showPlayerMenu = false;
 let showPrintView = false;
 
 // Constants
@@ -64,7 +65,17 @@ function saveToStorage() {
 
 // Actions
 function updatePlayerName(index, value) {
+  const oldName = players[index];
   players[index] = value;
+  // Update name in all games' groups
+  games.forEach(game => {
+    ['A', 'B', 'C', 'D'].forEach(group => {
+      const idx = game.groups[group].indexOf(oldName);
+      if (idx !== -1) {
+        game.groups[group][idx] = value;
+      }
+    });
+  });
   saveToStorage();
 }
 
@@ -184,6 +195,11 @@ function setCurrentGame(idx) {
 
 function toggleNameMenu() {
   showNameMenu = !showNameMenu;
+  render();
+}
+
+function togglePlayerMenu() {
+  showPlayerMenu = !showPlayerMenu;
   render();
 }
 
@@ -575,21 +591,8 @@ function renderMainView() {
 
     <div class="mb-6 p-4 bg-white rounded-lg shadow">
       <h2 class="text-xl font-bold mb-4">Player List</h2>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-  `;
-
-  players.forEach((player, idx) => {
-    html += `
-      <input type="text" value="${escapeHtml(player)}"
-        onchange="updatePlayerName(${idx}, this.value)"
-        class="border rounded px-2 py-1" />
-    `;
-  });
-
-  html += `
-      </div>
-      <div class="mt-4 flex gap-3 flex-wrap">
-        <button onclick="randomizeAllGames()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-semibold">Randomize All 6 Games</button>
+      <div class="flex gap-3 flex-wrap">
+        <button onclick="togglePlayerMenu()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-semibold">Edit Players</button>
         <button onclick="toggleNameMenu()" class="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 font-semibold">Name Games</button>
         <button onclick="printFixturesAndResults()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 font-semibold">Print Fixtures & Results</button>
         <button onclick="exportData()" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 font-semibold">Export Data</button>
@@ -597,6 +600,28 @@ function renderMainView() {
         <button onclick="clearAllData()" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-semibold">Clear All Data</button>
       </div>
   `;
+
+  if (showPlayerMenu) {
+    html += `
+      <div class="mt-4 p-4 bg-gray-50 rounded">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+    `;
+    players.forEach((player, idx) => {
+      html += `
+        <input type="text" value="${escapeHtml(player)}"
+          onchange="updatePlayerName(${idx}, this.value)"
+          class="border rounded px-2 py-1" />
+      `;
+    });
+    html += `
+        </div>
+        <div class="mt-3 flex gap-3">
+          <button onclick="randomizeAllGames()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-semibold">Randomize All 6 Games</button>
+          <button onclick="togglePlayerMenu()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">Done</button>
+        </div>
+      </div>
+    `;
+  }
 
   if (showNameMenu) {
     html += `
