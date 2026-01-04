@@ -849,32 +849,13 @@ function renderMainView() {
   const overallStandings = calculateOverallStandings();
   html += `
     <div class="mt-8 p-4 bg-white rounded-lg shadow">
-      <h2 class="text-2xl font-bold mb-4 text-center">Overall Tournament Winners</h2>
+      <h2 class="text-2xl font-bold mb-4 text-center">Game Winner</h2>
   `;
 
   if (overallStandings.length > 0) {
     html += `
-      <table class="w-full text-sm">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="text-left px-3 py-2">Position</th>
-            <th class="text-left px-3 py-2">Player</th>
-            <th class="text-center px-3 py-2">Game Wins</th>
-          </tr>
-        </thead>
-        <tbody>
+      <p class="text-4xl font-bold text-center">${escapeHtml(overallStandings[0].player)}</p>
     `;
-    overallStandings.forEach((standing, idx) => {
-      const rowClass = idx === 0 ? 'bg-yellow-100 font-bold' : '';
-      html += `
-        <tr class="${rowClass}">
-          <td class="px-3 py-2">${idx + 1}</td>
-          <td class="px-3 py-2">${escapeHtml(standing.player)}</td>
-          <td class="text-center px-3 py-2">${standing.wins}</td>
-        </tr>
-      `;
-    });
-    html += '</tbody></table>';
   } else {
     html += '<p class="text-gray-500 text-center">No finals completed yet</p>';
   }
