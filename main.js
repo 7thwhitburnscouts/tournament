@@ -132,6 +132,51 @@ function clearAllData() {
   }
 }
 
+function exportData() {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    players: players,
+    games: games
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tournament-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (!data.players || !data.games) {
+          alert('Invalid tournament file');
+          return;
+        }
+        if (confirm('This will replace all current data. Continue?')) {
+          players = data.players;
+          games = data.games;
+          saveToStorage();
+          render();
+        }
+      } catch (err) {
+        alert('Failed to read file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
 function setCurrentGame(idx) {
   currentGame = idx;
   render();
@@ -547,6 +592,8 @@ function renderMainView() {
         <button onclick="randomizeAllGames()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-semibold">Randomize All 6 Games</button>
         <button onclick="toggleNameMenu()" class="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 font-semibold">Name Games</button>
         <button onclick="printFixturesAndResults()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 font-semibold">Print Fixtures & Results</button>
+        <button onclick="exportData()" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 font-semibold">Export Data</button>
+        <button onclick="importData()" class="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600 font-semibold">Import Data</button>
         <button onclick="clearAllData()" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-semibold">Clear All Data</button>
       </div>
   `;
