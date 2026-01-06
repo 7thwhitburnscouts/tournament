@@ -6,6 +6,8 @@ let currentGame = 0;
 let showNameMenu = false;
 let showPlayerMenu = false;
 let showPrintView = false;
+let editingGroups = false;
+let swapSelection = null;
 
 // Constants
 const MATCHUPS = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
@@ -106,6 +108,39 @@ function togglePlayerAvailability(playerName) {
 
 function isPlayerUnavailable(playerName) {
   return unavailablePlayers.includes(playerName);
+}
+
+function gameHasResults(gameIndex) {
+  const game = games[gameIndex];
+  for (const group of ['A', 'B', 'C', 'D']) {
+    for (const match of game.matches[group]) {
+      if (match.home !== '' || match.away !== '') return true;
+    }
+  }
+  return false;
+}
+
+function toggleEditGroups() {
+  editingGroups = !editingGroups;
+  swapSelection = null;
+  render();
+}
+
+function selectPlayerForSwap(gameIndex, group, playerIndex) {
+  if (!swapSelection) {
+    swapSelection = { gameIndex, group, playerIndex };
+  } else {
+    // Perform swap
+    const sel = swapSelection;
+    const player1 = games[sel.gameIndex].groups[sel.group][sel.playerIndex];
+    const player2 = games[gameIndex].groups[group][playerIndex];
+    games[sel.gameIndex].groups[sel.group][sel.playerIndex] = player2;
+    games[gameIndex].groups[group][playerIndex] = player1;
+    swapSelection = null;
+    editingGroups = false;
+    saveToStorage();
+  }
+  render();
 }
 
 function shuffleArray(array) {
@@ -747,24 +782,63 @@ function renderMainView() {
   html += '</div></div>';
 
   // Current game groups
+  const hasResults = gameHasResults(currentGame);
   html += `
     <div class="mb-6 p-4 bg-white rounded-lg shadow">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl font-bold">${escapeHtml(games[currentGame].name)}</h2>
-        <button onclick="randomizeGroups(${currentGame})"
-          class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-semibold">
-          Randomize This Game
-        </button>
+        <div class="flex gap-2">
+          ${editingGroups ? `
+            <button onclick="toggleEditGroups()"
+              class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 text-sm font-semibold">
+              Cancel
+            </button>
+          ` : `
+            <button onclick="toggleEditGroups()"
+              class="${hasResults ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded text-sm font-semibold"
+              ${hasResults ? 'disabled' : ''}>
+              Edit Groups
+            </button>
+          `}
+          <button onclick="randomizeGroups(${currentGame})"
+            class="${hasResults ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded text-sm font-semibold"
+            ${hasResults ? 'disabled' : ''}>
+            Randomize This Game
+          </button>
+        </div>
       </div>
+      ${editingGroups ? '<p class="text-sm text-blue-600 mb-3">Click two players to swap their positions</p>' : ''}
       <div class="grid md:grid-cols-2 gap-4">
   `;
 
   GROUPS.forEach(group => {
     const groupPlayers = games[currentGame].groups[group];
+    let playerListHtml = '';
+    if (groupPlayers.length > 0) {
+      if (editingGroups) {
+        playerListHtml = `<div class="mb-3 text-sm"><strong>Players:</strong><div class="mt-1 space-y-1">`;
+        groupPlayers.forEach((player, idx) => {
+          const isSelected = swapSelection &&
+            swapSelection.gameIndex === currentGame &&
+            swapSelection.group === group &&
+            swapSelection.playerIndex === idx;
+          playerListHtml += `
+            <div class="flex items-center gap-2 ${isSelected ? 'bg-blue-100 rounded px-1' : ''}">
+              <button onclick="selectPlayerForSwap(${currentGame}, '${group}', ${idx})"
+                class="text-blue-600 hover:text-blue-800">↔</button>
+              <span>${escapeHtml(player)}</span>
+            </div>
+          `;
+        });
+        playerListHtml += `</div></div>`;
+      } else {
+        playerListHtml = `<div class="mb-3 text-sm"><strong>Players:</strong> ${groupPlayers.map(p => escapeHtml(p)).join(', ')}</div>`;
+      }
+    }
     html += `
       <div class="p-3 bg-gray-50 rounded">
         <h3 class="font-bold mb-3">Group ${group}</h3>
-        ${groupPlayers.length > 0 ? `<div class="mb-3 text-sm"><strong>Players:</strong> ${groupPlayers.map(p => escapeHtml(p)).join(', ')}</div>` : ''}
+        ${playerListHtml}
         ${renderGroupMatches(currentGame, group)}
       </div>
     `;
