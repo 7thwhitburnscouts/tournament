@@ -181,16 +181,42 @@ function randomizeAllGames() {
   render();
 }
 
-function updateMatchScore(gameIndex, group, matchIndex, field, value) {
+function updateMatchScore(gameIndex, group, matchIndex, field, value, element) {
   games[gameIndex].matches[group][matchIndex][field] = value;
   saveToStorage();
-  render();
+  renderWithFocusPreservation(element);
 }
 
-function updateKnockout(gameIndex, stage, field, value) {
+function updateKnockout(gameIndex, stage, field, value, element) {
   games[gameIndex].knockouts[stage][field] = value;
   saveToStorage();
+  renderWithFocusPreservation(element);
+}
+
+function renderWithFocusPreservation(currentElement) {
+  // Find the next tabbable score input after the current element
+  let nextFocusId = null;
+
+  if (currentElement && currentElement.dataset && currentElement.dataset.scoreId) {
+    // Get all score inputs in tab order
+    const allInputs = Array.from(document.querySelectorAll('input[data-score-id]'));
+    const currentIndex = allInputs.indexOf(currentElement);
+    if (currentIndex !== -1 && currentIndex < allInputs.length - 1) {
+      nextFocusId = allInputs[currentIndex + 1].dataset.scoreId;
+    }
+  }
+
   render();
+
+  // Restore focus to the next element after browser completes focus handling
+  if (nextFocusId) {
+    setTimeout(() => {
+      const nextElement = document.querySelector(`input[data-score-id="${nextFocusId}"]`);
+      if (nextElement) {
+        nextElement.focus();
+      }
+    }, 0);
+  }
 }
 
 function clearAllData() {
@@ -487,11 +513,13 @@ function renderGroupMatches(gameIndex, groupName) {
       <div class="flex items-center gap-2">
         <span class="w-28 text-right truncate ${homeClass}">${escapeHtml(homePlayer)}</span>
         <input type="number" min="0" value="${escapeHtml(homeValue)}"
-          onchange="updateMatchScore(${gameIndex}, '${groupName}', ${idx}, 'home', this.value)"
+          onchange="updateMatchScore(${gameIndex}, '${groupName}', ${idx}, 'home', this.value, this)"
+          data-score-id="g${gameIndex}-${groupName}-${idx}-home"
           class="w-14 border rounded px-2 py-1 text-center ${inputClass}" ${isForfeit ? 'disabled' : ''} />
         <span>-</span>
         <input type="number" min="0" value="${escapeHtml(awayValue)}"
-          onchange="updateMatchScore(${gameIndex}, '${groupName}', ${idx}, 'away', this.value)"
+          onchange="updateMatchScore(${gameIndex}, '${groupName}', ${idx}, 'away', this.value, this)"
+          data-score-id="g${gameIndex}-${groupName}-${idx}-away"
           class="w-14 border rounded px-2 py-1 text-center ${inputClass}" ${isForfeit ? 'disabled' : ''} />
         <span class="w-28 truncate ${awayClass}">${escapeHtml(awayPlayer)}</span>
         ${isForfeit ? '<span class="text-xs text-red-500 ml-1">Forfeit</span>' : ''}
@@ -868,14 +896,16 @@ function renderMainView() {
             <input type="text" value="${groupAComplete ? escapeHtml(autoKO.semi1.player1) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Group A Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.semi1.score1)}"
-              onchange="updateKnockout(${currentGame}, 'semi1', 'score1', this.value)"
+              onchange="updateKnockout(${currentGame}, 'semi1', 'score1', this.value, this)"
+              data-score-id="g${currentGame}-semi1-score1"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
           <div class="flex items-center gap-2">
             <input type="text" value="${groupBComplete ? escapeHtml(autoKO.semi1.player2) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Group B Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.semi1.score2)}"
-              onchange="updateKnockout(${currentGame}, 'semi1', 'score2', this.value)"
+              onchange="updateKnockout(${currentGame}, 'semi1', 'score2', this.value, this)"
+              data-score-id="g${currentGame}-semi1-score2"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
         </div>
@@ -886,14 +916,16 @@ function renderMainView() {
             <input type="text" value="${groupCComplete ? escapeHtml(autoKO.semi2.player1) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Group C Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.semi2.score1)}"
-              onchange="updateKnockout(${currentGame}, 'semi2', 'score1', this.value)"
+              onchange="updateKnockout(${currentGame}, 'semi2', 'score1', this.value, this)"
+              data-score-id="g${currentGame}-semi2-score1"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
           <div class="flex items-center gap-2">
             <input type="text" value="${groupDComplete ? escapeHtml(autoKO.semi2.player2) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Group D Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.semi2.score2)}"
-              onchange="updateKnockout(${currentGame}, 'semi2', 'score2', this.value)"
+              onchange="updateKnockout(${currentGame}, 'semi2', 'score2', this.value, this)"
+              data-score-id="g${currentGame}-semi2-score2"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
         </div>
@@ -904,14 +936,16 @@ function renderMainView() {
             <input type="text" value="${semi1HasScore ? escapeHtml(autoKO.final.player1) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Semi-Final 1 Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.final.score1)}"
-              onchange="updateKnockout(${currentGame}, 'final', 'score1', this.value)"
+              onchange="updateKnockout(${currentGame}, 'final', 'score1', this.value, this)"
+              data-score-id="g${currentGame}-final-score1"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
           <div class="flex items-center gap-2">
             <input type="text" value="${semi2HasScore ? escapeHtml(autoKO.final.player2) : ''}" readonly
               class="flex-1 border rounded px-3 py-2 bg-gray-50" placeholder="Semi-Final 2 Winner" />
             <input type="number" min="0" value="${escapeHtml(ko.final.score2)}"
-              onchange="updateKnockout(${currentGame}, 'final', 'score2', this.value)"
+              onchange="updateKnockout(${currentGame}, 'final', 'score2', this.value, this)"
+              data-score-id="g${currentGame}-final-score2"
               class="w-20 border rounded px-3 py-2 text-center" />
           </div>
         </div>
