@@ -6,6 +6,7 @@ let currentGame = 0;
 let showNameMenu = false;
 let showPlayerMenu = false;
 let showPrintView = false;
+let showUnplayedPrintView = false;
 let editingGroups = false;
 let swapSelection = null;
 
@@ -292,11 +293,26 @@ function togglePlayerMenu() {
 
 function togglePrintView() {
   showPrintView = !showPrintView;
+  showUnplayedPrintView = false;
   render();
 }
 
 function printFixturesAndResults() {
   showPrintView = true;
+  showUnplayedPrintView = false;
+  render();
+  setTimeout(() => window.print(), 100);
+}
+
+function toggleUnplayedPrintView() {
+  showUnplayedPrintView = !showUnplayedPrintView;
+  showPrintView = false;
+  render();
+}
+
+function printUnplayedFixtures() {
+  showUnplayedPrintView = true;
+  showPrintView = false;
   render();
   setTimeout(() => window.print(), 100);
 }
@@ -463,6 +479,50 @@ function calculateOverallStandings() {
 
 function isGroupComplete(gameIdx, group) {
   return games[gameIdx].matches[group].every(match => match.home !== '' && match.away !== '');
+}
+
+function getUnplayedFixturesPerPlayer() {
+  const fixturesByPlayer = {};
+
+  // Initialize for all players
+  players.forEach(player => {
+    fixturesByPlayer[player] = [];
+  });
+
+  // Go through each game
+  games.forEach((game, gameIdx) => {
+    // Go through each group
+    GROUPS.forEach(group => {
+      const groupPlayers = game.groups[group];
+      if (!groupPlayers || groupPlayers.length === 0) return;
+
+      // Go through each match in the group
+      MATCHUPS.forEach((matchup, matchIdx) => {
+        const match = game.matches[group][matchIdx];
+        const homePlayer = groupPlayers[matchup[0]];
+        const awayPlayer = groupPlayers[matchup[1]];
+        const homeUnavail = isPlayerUnavailable(homePlayer);
+        const awayUnavail = isPlayerUnavailable(awayPlayer);
+
+        // Skip if match has scores or either player is unavailable (forfeit)
+        if (match.home !== '' || match.away !== '' || homeUnavail || awayUnavail) {
+          return;
+        }
+
+        // Add this fixture for both players
+        fixturesByPlayer[homePlayer].push({
+          gameName: game.name,
+          opponent: awayPlayer
+        });
+        fixturesByPlayer[awayPlayer].push({
+          gameName: game.name,
+          opponent: homePlayer
+        });
+      });
+    });
+  });
+
+  return fixturesByPlayer;
 }
 
 // Rendering
@@ -722,6 +782,68 @@ function renderPrintView() {
   return html;
 }
 
+function renderUnplayedPrintView() {
+  const fixturesByPlayer = getUnplayedFixturesPerPlayer();
+
+  let html = `
+    <div class="print-view">
+      <div class="no-print mb-4 flex gap-3">
+        <button onclick="window.print()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 font-semibold">
+          Print
+        </button>
+        <button onclick="toggleUnplayedPrintView()" class="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 font-semibold">
+          Close Print View
+        </button>
+      </div>
+      <h2 class="text-xl font-bold border-b-2 border-gray-800 pb-1 mb-4">Unplayed Fixtures by Player</h2>
+  `;
+
+  // Group fixtures by game for each player
+  players.forEach(player => {
+    const playerFixtures = fixturesByPlayer[player];
+    if (playerFixtures.length === 0) return;
+
+    // Group by game name
+    const fixturesByGame = {};
+    playerFixtures.forEach(fixture => {
+      if (!fixturesByGame[fixture.gameName]) {
+        fixturesByGame[fixture.gameName] = [];
+      }
+      fixturesByGame[fixture.gameName].push(fixture.opponent);
+    });
+
+    html += `
+      <div class="mb-4 pb-2 border-b border-gray-300">
+        <h3 class="text-base font-bold mb-2">${escapeHtml(player)}</h3>
+        <div class="text-sm">
+    `;
+
+    Object.keys(fixturesByGame).forEach(gameName => {
+      const opponents = fixturesByGame[gameName];
+      html += `
+        <div class="mb-1">
+          <span class="font-semibold">${escapeHtml(gameName)}:</span>
+          vs ${opponents.map(o => escapeHtml(o)).join(', ')}
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  // Check if there are any unplayed fixtures
+  const hasUnplayedFixtures = players.some(player => fixturesByPlayer[player].length > 0);
+  if (!hasUnplayedFixtures) {
+    html += '<p class="text-gray-500 italic">All fixtures have been played!</p>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 function renderMainView() {
   let html = `
     <h1 class="text-3xl font-bold mb-6 text-center">7th Whitburn Scouts Tournament Jan 2026</h1>
@@ -732,6 +854,7 @@ function renderMainView() {
         <button onclick="togglePlayerMenu()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-semibold">Edit Players</button>
         <button onclick="toggleNameMenu()" class="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 font-semibold">Name Games</button>
         <button onclick="printFixturesAndResults()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 font-semibold">Print Fixtures & Results</button>
+        <button onclick="printUnplayedFixtures()" class="bg-teal-600 text-white px-6 py-2 rounded hover:bg-teal-700 font-semibold">Print Unplayed</button>
         <button onclick="exportData()" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 font-semibold">Export Data</button>
         <button onclick="importData()" class="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600 font-semibold">Import Data</button>
         <button onclick="clearAllData()" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-semibold">Clear All Data</button>
@@ -974,7 +1097,13 @@ function renderMainView() {
 
 function render() {
   const app = document.getElementById('app');
-  app.innerHTML = showPrintView ? renderPrintView() : renderMainView();
+  if (showPrintView) {
+    app.innerHTML = renderPrintView();
+  } else if (showUnplayedPrintView) {
+    app.innerHTML = renderUnplayedPrintView();
+  } else {
+    app.innerHTML = renderMainView();
+  }
 }
 
 // Start the app
